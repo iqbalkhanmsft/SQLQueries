@@ -1,0 +1,62 @@
+## Query outputs.
+
+-- Whole DMV returned.
+SELECT * FROM sys.dm_exec_requests
+
+-- DMV reformattted and filtered out system queries.
+SELECT      r.start_time [Start Time],session_ID [SPID],
+            DB_NAME(database_id) [Database],
+            SUBSTRING(t.text,(r.statement_start_offset/2)+1,
+            CASE WHEN statement_end_offset=-1 OR statement_end_offset=0
+            THEN (DATALENGTH(t.Text)-r.statement_start_offset/2)+1
+            ELSE (r.statement_end_offset-r.statement_start_offset)/2+1
+            END) [Executing SQL],
+            Status,command,wait_type,wait_time,wait_resource,
+            last_wait_type
+FROM        sys.dm_exec_requests r
+OUTER APPLY sys.dm_exec_sql_text(sql_handle) t
+WHERE       session_id != @@SPID -- don't show this query
+AND         session_id > 50 -- don't show system queries
+ORDER BY    r.start_time
+
+-- Source for above 2 queries: https://www.sqlmatters.com/Articles/See%20what%20queries%20are%20currently%20running.aspx
+
+SELECT sqltext.TEXT,
+req.session_id,
+req.status,
+req.command,
+req.cpu_time,
+req.total_elapsed_time
+FROM sys.dm_exec_requests req
+CROSS APPLY sys.dm_exec_sql_text(sql_handle) AS sqltext
+
+KILL [session_id]
+
+-- Source for above query: https://blog.sqlauthority.com/2009/01/07/sql-server-find-currently-running-query-t-sql/
+-- Shows which queries are currently running; followed by kill command as needed.
+
+## Connection outputs.
+
+-- Shows current connections to SQL Server DB, from a "who" perspective.
+-- First query is native; second query transforms SP to make it more understandable.
+
+exec sp_who2
+
+CREATE TABLE #sp_who2 (SPID INT,Status VARCHAR(255),
+      Login  VARCHAR(255),HostName  VARCHAR(255),
+      BlkBy  VARCHAR(255),DBName  VARCHAR(255),
+      Command VARCHAR(255),CPUTime INT,
+      DiskIO INT,LastBatch VARCHAR(255),
+      ProgramName VARCHAR(255),SPID2 INT,
+      REQUESTID INT)
+INSERT INTO #sp_who2 EXEC sp_who2
+SELECT      *
+FROM        #sp_who2
+-- Add any filtering of the results here :
+WHERE       DBName <> 'master'
+-- Add any sorting of the results here :
+ORDER BY    DBName ASC
+ 
+DROP TABLE #sp_who2
+
+-- Source for above 2 queries: https://www.sqlmatters.com/Articles/sp_who2%20-%20filtering%20and%20sorting%20the%20results.aspx
