@@ -1,0 +1,14 @@
+SELECT * 
+FROM $System.Discover_Sessions
+ORDER BY SESSION_START_TIME DESC
+
+SELECT * 
+FROM $System.Discover_Sessions
+WHERE SESSION_USER_NAME = 'NT AUTHORITY\SYSTEM'
+ORDER BY SESSION_START_TIME DESC
+
+SELECT DISTINCT SESSION_USER_NAME, SESSION_START_TIME 
+FROM $System.Discover_Sessions
+ORDER BY SESSION_START_TIME DESC
+
+Reference: https://data-marc.com/2020/09/29/analyze-active-sessions-and-cancel-refreshes-in-power-bi/
